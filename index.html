@@ -1,0 +1,251 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>航空指挥控制台 - Aerospace Command Interface</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div id="aircraftSelect" class="modal">
+        <div class="modal-card">
+          <h2>航空器型号选择</h2>
+          <p class="modal-note">任务池将根据型号加载。</p>
+          <div class="modal-options">
+            <label>
+              <input id="kcOption" type="checkbox" checked />
+              显示Kill Count
+            </label>
+            <label>
+              <input id="attritionOption" type="checkbox" />
+              启用基地减员
+            </label>
+            <p class="option-note">KC：击杀数就是击杀数，说到底企划背景摆在那里，而且还可以避免热乎乎的敌人变成冷冰冰的功勋这种事情。这是一个单纯并且逻辑简单的计数器，没有任何判定。但是我们也确实不是严肃的企划，所以可以选择是否打开，完全取决于您。</p>
+            <p class="option-note">基地减员：如果打开了，基地就会随机减员。</p>
+          </div>
+          <div class="modal-actions">
+            <button class="btn primary" data-aircraft="air">对空</button>
+            <button class="btn ghost" data-aircraft="ground">对地</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="combatOverlay" class="combat hidden">
+        <div class="combat-shell">
+          <canvas id="combatCanvas"></canvas>
+          <div class="combat-hud">
+            <div class="hud-row">
+              <div class="hud-block">
+                <span>任务</span>
+                <strong id="combatMissionName">--</strong>
+              </div>
+              <div class="hud-block">
+                <span>剩余时间</span>
+                <strong id="combatTimer">0</strong>
+              </div>
+              <div class="hud-block">
+                <span>锁定目标</span>
+                <strong id="combatLock">无</strong>
+              </div>
+            </div>
+            <div class="hud-row">
+              <div class="hud-block">
+                <span>目标剩余</span>
+                <strong id="combatTargets">0</strong>
+              </div>
+              <div class="hud-block" id="combatKCBlock">
+                <span>KC</span>
+                <strong id="combatKC">0</strong>
+              </div>
+              <div class="hud-block">
+                <span>导弹命中</span>
+                <strong id="combatHits">0</strong>
+              </div>
+              <div class="hud-block">
+                <span>机炮命中</span>
+                <strong id="combatGunHits">0</strong>
+              </div>
+              <div class="hud-block alert">
+                <span>受击警报</span>
+                <strong id="combatHitAlert">--</strong>
+              </div>
+            </div>
+          </div>
+          <div class="combat-radar">
+            <div class="radar-core">
+              <div class="radar-dir" data-dir="up">N</div>
+              <div class="radar-dir" data-dir="right">E</div>
+              <div class="radar-dir" data-dir="down">S</div>
+              <div class="radar-dir" data-dir="left">W</div>
+            </div>
+          </div>
+          <div id="combatResult" class="combat-result hidden">
+            <h3 id="combatResultTitle">任务失败</h3>
+            <p id="combatResultText">--</p>
+            <div class="combat-actions">
+              <button id="combatRetry" class="btn primary">重新开始</button>
+              <button id="combatAbort" class="btn ghost">放弃任务</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <header class="hero">
+        <div class="hero-text">
+          <p class="hero-tag">TACTICAL CONTROL NETWORK</p>
+          <h1>
+            <span id="baseNameDisplay" class="editable" data-edit="base">基地-01</span>
+          </h1>
+          <div class="hero-meta">
+            <div>
+              <span>核心航空器</span>
+              <strong id="aircraftNameDisplay" class="editable" data-edit="aircraft"
+                >航空器-01</strong
+              >
+            </div>
+            <div>
+              <span>机型</span>
+              <strong id="aircraftTypeDisplay">未配置</strong>
+            </div>
+            <div>
+              <span>总 KC</span>
+              <strong id="kcTotalDisplay">--</strong>
+            </div>
+          </div>
+        </div>
+        <div class="hero-status">
+          <div class="status-line">
+            <span>任务区</span>
+            <strong>“瓦尔哈拉”</strong>
+          </div>
+          <div class="status-line">
+            <span>准备点数</span>
+            <strong id="prepPoints">0</strong>
+          </div>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="card status">
+          <h2>指挥状态</h2>
+          <div class="stat-grid">
+            <div class="stat">
+              <span class="stat-label">准备点数</span>
+              <strong id="prepPointsMain" class="stat-value">0</strong>
+              <small id="prepRate">+0 / 秒</small>
+            </div>
+            <div class="stat">
+              <span class="stat-label">资源点数</span>
+              <strong id="resourcePoints" class="stat-value">0</strong>
+              <small id="resourceRate">+0 / 秒</small>
+            </div>
+            <div class="stat">
+              <span class="stat-label">功勋点数</span>
+              <strong id="meritPoints" class="stat-value">0</strong>
+              <small id="meritRate">+0 / 秒</small>
+            </div>
+            <div class="stat">
+              <span class="stat-label">作战指挥塔</span>
+              <strong id="opsLevel" class="stat-value">Lv.1</strong>
+              <small id="opsBonus">准备点数增长</small>
+            </div>
+            <div class="stat">
+              <span class="stat-label">补给仓库</span>
+              <strong id="supplyLevel" class="stat-value">Lv.1</strong>
+              <small id="supplyBonus">资源点数增长</small>
+            </div>
+            <div class="stat">
+              <span class="stat-label">训练甲板</span>
+              <strong id="trainingLevel" class="stat-value">Lv.1</strong>
+              <small id="trainingBonus">功勋点增长</small>
+            </div>
+          </div>
+          <div class="meter">
+            <div>
+              <span>航空器就绪度</span>
+              <strong id="aircraftStatus">待命</strong>
+            </div>
+            <div class="progress">
+              <div id="aircraftProgress" class="progress-bar"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card aircraft">
+          <h2>任务控制</h2>
+          <div class="aircraft-switch">
+            <span>机型切换</span>
+            <div class="switch-actions">
+              <button class="btn ghost" data-aircraft-switch="air">对空</button>
+              <button class="btn ghost" data-aircraft-switch="ground">对地</button>
+            </div>
+          </div>
+          <div class="mission-list" id="missionList"></div>
+          <div class="launch">
+            <button id="launchMission" class="btn primary">执行所选任务</button>
+          </div>
+          <div class="save-controls">
+            <button id="saveGame" class="btn ghost">保存</button>
+            <button id="loadGame" class="btn ghost">读取</button>
+          </div>
+          <input id="loadFileInput" class="file-input" type="file" accept="application/json" />
+        </section>
+
+        <section class="card management">
+          <h2>基地调度</h2>
+          <div class="management-grid">
+            <div class="panel">
+              <h3>人员编制</h3>
+              <div class="staff-row">
+                <span>现役人员</span>
+                <strong id="staffTotal">0</strong>
+              </div>
+              <div class="staff-row">
+                <span>待命人员</span>
+                <strong id="staffIdle">0</strong>
+              </div>
+              <div class="staff-assign">
+                <div>
+                  <span>作战指挥</span>
+                  <strong id="staffOps">0</strong>
+                </div>
+                <button data-staff="ops" class="btn ghost">+1</button>
+              </div>
+              <div class="staff-assign">
+                <div>
+                  <span>工程维护</span>
+                  <strong id="staffEng">0</strong>
+                </div>
+                <button data-staff="eng" class="btn ghost">+1</button>
+              </div>
+              <div class="staff-assign">
+                <div>
+                  <span>情报分析</span>
+                  <strong id="staffIntel">0</strong>
+                </div>
+                <button data-staff="intel" class="btn ghost">+1</button>
+              </div>
+              <button id="recruitStaff" class="btn primary">补充人员 (消耗资源)</button>
+              <div class="panel-note">名册双击可重命名。</div>
+              <div class="roster" id="staffRoster"></div>
+            </div>
+
+            <div class="panel">
+              <h3>设施升级</h3>
+              <div class="upgrade-list" id="upgradeList"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card log">
+          <h2>行动记录</h2>
+          <div id="logFeed" class="log-feed"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="decorations.js"></script>
+    <script src="game.js"></script>
+  </body>
+</html>
