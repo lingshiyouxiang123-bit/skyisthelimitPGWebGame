@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   color-scheme: dark;
   
   --bg: #0a0e0a;
@@ -507,6 +507,200 @@ h1 {
 .switch-actions {
   display: flex;
   gap: 8px;
+}
+
+.converter-layout {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.converter-inputs {
+  display: grid;
+  gap: 18px;
+}
+
+.converter-options {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.converter-options input {
+  accent-color: var(--signal);
+}
+
+.converter-options label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 217, 61, 0.4);
+  background: rgba(255, 217, 61, 0.08);
+  box-shadow: 0 0 18px rgba(255, 217, 61, 0.2);
+}
+
+.converter-options label:has(input:checked) {
+  border-color: rgba(255, 68, 68, 0.8);
+  background: rgba(255, 68, 68, 0.15);
+  box-shadow: 0 0 24px rgba(255, 68, 68, 0.4);
+  color: var(--warning);
+}
+
+.converter-results {
+  border: 1px solid rgba(127, 212, 127, 0.25);
+  padding: 16px;
+  background: rgba(10, 14, 10, 0.75);
+  min-height: 240px;
+}
+
+.converter-results h3 {
+  margin: 0 0 12px;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--signal);
+}
+
+.record-list {
+  display: grid;
+  gap: 10px;
+}
+
+
+.record-item {
+  border: 1px dashed rgba(127, 212, 127, 0.2);
+  background: rgba(8, 12, 10, 0.6);
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.record-item.summary {
+  border-color: rgba(255, 217, 61, 0.4);
+  background: rgba(18, 16, 8, 0.6);
+}
+
+.record-title {
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--signal);
+}
+
+.record-row {
+  color: var(--ink-soft);
+}
+
+.record-sides {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.record-side {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgba(127, 212, 127, 0.15);
+  background: rgba(10, 14, 10, 0.5);
+}
+
+@media (max-width: 900px) {
+  .record-sides {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+.round-block {
+  border: 1px solid rgba(127, 212, 127, 0.25);
+  padding: 12px;
+  background: rgba(12, 18, 12, 0.6);
+}
+
+.round-block h3 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.round-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.round-rolls {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 10px;
+}
+
+.round-grid label {
+  display: grid;
+  gap: 6px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.round-grid input {
+  background: rgba(8, 12, 10, 0.9);
+  color: var(--ink);
+  border: 1px solid rgba(127, 212, 127, 0.3);
+  padding: 10px 12px;
+  font-family: "Courier New", monospace;
+  letter-spacing: 0.08em;
+}
+
+.round-rolls label {
+  display: grid;
+  gap: 6px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.round-rolls input {
+  background: rgba(8, 12, 10, 0.9);
+  color: var(--ink);
+  border: 1px solid rgba(127, 212, 127, 0.3);
+  padding: 10px 12px;
+  font-family: "Courier New", monospace;
+  letter-spacing: 0.08em;
+}
+
+.action-name {
+  font-size: 10px;
+  color: rgba(212, 232, 212, 0.6);
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+
+@media (max-width: 900px) {
+  .converter-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .round-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .round-rolls {
+    grid-template-columns: 1fr;
+  }
 }
 
 .launch {
