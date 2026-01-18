@@ -1,4 +1,4 @@
-﻿const state = {
+const state = {
   baseName: "基地-01",
   aircraftName: "航空器-01",
   aircraftType: null,
@@ -135,6 +135,13 @@ const dom = {
   loadFileInput: document.querySelector("#loadFileInput"),
   kcOption: document.querySelector("#kcOption"),
   attritionOption: document.querySelector("#attritionOption"),
+  openConverter: document.querySelector("#openConverter"),
+  backToGame: document.querySelector("#backToGame"),
+  gamePage: document.querySelector("#gamePage"),
+  converterPage: document.querySelector("#converterPage"),
+  gExtremeOption: document.querySelector("#gExtremeOption"),
+  convertCalculate: document.querySelector("#convertCalculate"),
+  convertRecords: document.querySelector("#convertRecords"),
   aircraftSelect: document.querySelector("#aircraftSelect"),
   combatOverlay: document.querySelector("#combatOverlay"),
   combatCanvas: document.querySelector("#combatCanvas"),
@@ -173,6 +180,374 @@ const applyStartupSettings = () => {
     dom.attritionOption.disabled = true;
   }
   state.settingsLocked = true;
+};
+
+const setActivePage = (page) => {
+  if (!dom.gamePage || !dom.converterPage) return;
+  const isConverter = page === "converter";
+  dom.gamePage.classList.toggle("hidden", isConverter);
+  dom.converterPage.classList.toggle("hidden", !isConverter);
+};
+
+const clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
+const randRange = (min, max) => min + Math.random() * (max - min);
+const actionNames = {
+  1: "高 / 低 Yo-Yo",
+  2: "高G转弯",
+  3: "最佳角速度转弯",
+  4: "滚转剪刀",
+  5: "俯冲脱离",
+  6: "滞后追踪",
+  7: "诚信对头",
+  8: "眼镜蛇",
+  9: "保守驾驶",
+  10: "浅俯冲",
+  11: "短暂松杆",
+  12: "射击窗口",
+};
+
+const getActionProfile = (actionId) => {
+  if (actionId === 1) {
+    const high = Math.random() < 0.5;
+    return high
+      ? {
+          speed: [-120, -50],
+          altitude: [200, 800],
+          g: [4, 6],
+          aoa: [12, 18],
+          ps: [-0.3, -0.1],
+        }
+      : {
+          speed: [40, 120],
+          altitude: [-600, -200],
+          g: [3, 6],
+          aoa: [8, 14],
+          ps: [0.1, 0.3],
+        };
+  }
+  const profiles = {
+    2: { speed: [-120, -50], altitude: [-50, 50], g: [7, 9], aoa: [15, 22], ps: [-1.0, -0.6] },
+    3: { speed: [-30, 10], altitude: [-50, 20], g: [3, 5], aoa: [12, 16], ps: [-0.1, 0.1] },
+    4: { speed: [-80, -30], altitude: [-600, -200], g: [3, 5], aoa: [15, 20], ps: [-1.0, -0.6] },
+    5: { speed: [80, 160], altitude: [-1200, -400], g: [1.5, 3], aoa: [2, 6], ps: [0.5, 1.0] },
+    6: { speed: [20, 60], altitude: [-50, 50], g: [3, 4], aoa: [10, 14], ps: [0.1, 0.3] },
+    7: { speed: [10, 40], altitude: [-30, 30], g: [1, 2], aoa: [5, 10], ps: [-0.05, 0.05] },
+    8: { speed: [-200, -120], altitude: [30, 120], g: [2, 4], aoa: [90, 120], ps: [-1.8, -1.2] },
+    9: { speed: [0, 30], altitude: [0, 60], g: [1, 3], aoa: [3, 10], ps: [0.2, 0.6] },
+    10: { speed: [30, 80], altitude: [-250, -80], g: [1, 2], aoa: [2, 6], ps: [0.2, 0.6] },
+    11: { speed: [20, 60], altitude: [-30, 40], g: [1, 1.5], aoa: [5, 10], ps: [0.2, 0.5] },
+    12: { speed: [-20, 20], altitude: [-20, 20], g: [3, 4], aoa: [10, 14], ps: [-0.1, 0.1] },
+  };
+  return profiles[actionId] || profiles[3];
+};
+
+const getActionScales = (actionId, d6) => {
+  const t = (clampNumber(d6, 1, 6) - 1) / 5;
+  const fast = 0.5 - t;
+  const slow = t - 0.5;
+  const energyHungry = new Set([2, 4, 8]);
+  const energyGain = new Set([5, 10, 11]);
+  const energyNeutral = new Set([3, 6, 7, 9, 12, 1]);
+
+  let energy = 1;
+  let control = 1;
+
+  if (energyHungry.has(actionId)) {
+    energy = 1 + slow * 0.6;
+    control = 1 + fast * 0.4;
+  } else if (energyGain.has(actionId)) {
+    energy = 1 + slow * 0.5;
+    control = 1 + slow * -0.2;
+  } else if (energyNeutral.has(actionId)) {
+    energy = 1 + fast * 0.2;
+    control = 1 + fast * 0.2;
+  }
+
+  return { energy, control };
+};
+
+const applyActionToState = (actionId, scale, d6, state, round) => {
+  const profile = getActionProfile(actionId);
+  const scales = getActionScales(actionId, d6);
+  const exaggeration = 1.45;
+  const energyScale = scale * scales.energy * exaggeration;
+  const altitudeScale = scale * scales.energy;
+  const controlScale = scale * scales.control * exaggeration;
+  state.speed += randRange(profile.speed[0], profile.speed[1]) * energyScale;
+  state.altitude += randRange(profile.altitude[0], profile.altitude[1]) * altitudeScale;
+  state.ps += randRange(profile.ps[0], profile.ps[1]) * energyScale;
+  round.gSum += randRange(profile.g[0], profile.g[1]) * controlScale;
+  round.gWeight += scale;
+  round.aoaSum += randRange(profile.aoa[0], profile.aoa[1]) * controlScale;
+  round.aoaWeight += scale;
+};
+
+const applyActionValue = (actionId, base, value, otherValue, flags, isDiscard) => {
+  switch (actionId) {
+    case 1: {
+      const roll = randomInt(1, 6);
+      value = Math.max(value, roll);
+      break;
+    }
+    case 2:
+      value += 4;
+      break;
+    case 3:
+      value += 2;
+      break;
+    case 4:
+      value += randomInt(1, isDiscard ? 4 : 6);
+      break;
+    case 5:
+      value -= 4;
+      break;
+    case 6:
+      value -= 2;
+      break;
+    case 7:
+      flags.swap = true;
+      break;
+    case 8:
+      value -= 2;
+      if (otherValue > 3) {
+        otherValue = 1;
+      }
+      break;
+    case 9:
+      flags.tieWin = true;
+      break;
+    case 10:
+      if (base > 3) {
+        value -= 2;
+      }
+      break;
+    case 11:
+      if (base < 3) {
+        value += 2;
+      }
+      break;
+    case 12:
+      flags.has12 = true;
+      break;
+    default:
+      break;
+  }
+  return { value, otherValue };
+};
+
+const getRoundInputs = (round) => {
+  const pick = (side, slot) => {
+    const input = document.querySelector(
+      `[data-round="${round}"][data-side="${side}"][data-slot="${slot}"]`
+    );
+    const raw = input?.value.trim();
+    if (slot === "roll") {
+      if (!raw) return randomInt(1, 6);
+      const value = clampNumber(Number(raw || 1), 1, 6);
+      if (input) input.value = `${value}`;
+      return value;
+    }
+    const value = clampNumber(Number(raw || 1), 1, 12);
+    if (input) input.value = `${value}`;
+    return value;
+  };
+  return {
+    selfUse: pick("self", "use"),
+    selfDiscard: pick("self", "discard"),
+    enemyUse: pick("enemy", "use"),
+    enemyDiscard: pick("enemy", "discard"),
+    selfRoll: pick("self", "roll"),
+    enemyRoll: pick("enemy", "roll"),
+  };
+};
+
+const formatPs = (ps) => {
+  if (ps >= 0.4) return "正";
+  if (ps <= -0.4) return "负";
+  return "中性";
+};
+
+
+const syncActionLabels = () => {
+  document.querySelectorAll("[data-action-name]").forEach((node) => {
+    const input = node.previousElementSibling;
+    const value = clampNumber(Number(input?.value || 1), 1, 12);
+    node.textContent = actionNames[value] || "--";
+  });
+};
+
+const updateConverter = () => {
+  if (!dom.convertRecords) return;
+  dom.convertRecords.innerHTML = "";
+  syncActionLabels();
+  const stateSelf = {
+    speed: 420,
+    altitude: 6000,
+    g: 1.2,
+    aoa: 7,
+    ps: 0.1,
+  };
+  const stateEnemy = {
+    speed: 420,
+    altitude: 6000,
+    g: 1.2,
+    aoa: 7,
+    ps: 0.1,
+  };
+  let totalScoreSelf = 0;
+  let totalScoreEnemy = 0;
+
+  for (let round = 1; round <= 4; round += 1) {
+    const { selfUse, selfDiscard, enemyUse, enemyDiscard, selfRoll, enemyRoll } =
+      getRoundInputs(round);
+    const selfBase = selfRoll;
+    const enemyBase = enemyRoll;
+    let selfValue = selfBase;
+    let enemyValue = enemyBase;
+    const selfFlags = { swap: false, tieWin: false, has12: false };
+    const enemyFlags = { swap: false, tieWin: false, has12: false };
+
+    let result = applyActionValue(selfUse, selfBase, selfValue, enemyValue, selfFlags, false);
+    selfValue = result.value;
+    enemyValue = result.otherValue;
+    result = applyActionValue(enemyUse, enemyBase, enemyValue, selfValue, enemyFlags, false);
+    enemyValue = result.value;
+    selfValue = result.otherValue;
+    result = applyActionValue(selfDiscard, selfBase, selfValue, enemyValue, selfFlags, true);
+    selfValue = result.value;
+    enemyValue = result.otherValue;
+    result = applyActionValue(enemyDiscard, enemyBase, enemyValue, selfValue, enemyFlags, true);
+    enemyValue = result.value;
+    selfValue = result.otherValue;
+
+    const swapSelf = selfFlags.swap && !enemyFlags.swap;
+    const swapEnemy = enemyFlags.swap && !selfFlags.swap;
+    if (swapSelf || swapEnemy) {
+      const temp = selfValue;
+      selfValue = enemyValue;
+      enemyValue = temp;
+    }
+
+    const selfAdv =
+      selfValue > enemyValue ||
+      (selfValue === enemyValue && selfFlags.tieWin && !enemyFlags.tieWin);
+    const enemyAdv =
+      enemyValue > selfValue ||
+      (selfValue === enemyValue && enemyFlags.tieWin && !selfFlags.tieWin);
+
+    if (selfFlags.has12 && selfAdv) {
+      selfValue += 3;
+    }
+    if (enemyFlags.has12 && enemyAdv) {
+      enemyValue += 3;
+    }
+
+    totalScoreSelf += selfValue;
+    totalScoreEnemy += enemyValue;
+
+    const selfBaseAdjust = (4 - selfBase) * 12;
+    const enemyBaseAdjust = (4 - enemyBase) * 12;
+    stateSelf.speed += selfBaseAdjust;
+    stateEnemy.speed += enemyBaseAdjust;
+    stateSelf.ps += (4 - selfBase) * 0.15;
+    stateEnemy.ps += (4 - enemyBase) * 0.15;
+    const selfScale = 1;
+    const enemyScale = 1;
+    const roundSelf = { gSum: 0, gWeight: 0, aoaSum: 0, aoaWeight: 0 };
+    const roundEnemy = { gSum: 0, gWeight: 0, aoaSum: 0, aoaWeight: 0 };
+    applyActionToState(selfUse, selfScale, selfBase, stateSelf, roundSelf);
+    applyActionToState(selfDiscard, selfScale * 0.6, selfBase, stateSelf, roundSelf);
+    applyActionToState(enemyUse, enemyScale, enemyBase, stateEnemy, roundEnemy);
+    applyActionToState(enemyDiscard, enemyScale * 0.6, enemyBase, stateEnemy, roundEnemy);
+
+    stateSelf.speed = clampNumber(stateSelf.speed, 120, 1300);
+    stateSelf.altitude = clampNumber(stateSelf.altitude, 500, 15000);
+    stateSelf.ps = clampNumber(stateSelf.ps, -3, 3);
+    const extremeG = dom.gExtremeOption?.checked === true;
+    const gMax = extremeG ? 26 : 9;
+    stateSelf.g =
+      roundSelf.gWeight > 0 ? roundSelf.gSum / roundSelf.gWeight : stateSelf.g;
+    if (extremeG) {
+      stateSelf.g *= 2.1;
+      stateSelf.g += 3;
+    }
+    stateSelf.g = clampNumber(stateSelf.g, 0.5, gMax);
+    stateSelf.aoa =
+      roundSelf.aoaWeight > 0 ? roundSelf.aoaSum / roundSelf.aoaWeight : stateSelf.aoa;
+
+    stateEnemy.speed = clampNumber(stateEnemy.speed, 120, 1300);
+    stateEnemy.altitude = clampNumber(stateEnemy.altitude, 500, 15000);
+    stateEnemy.ps = clampNumber(stateEnemy.ps, -3, 3);
+    stateEnemy.g =
+      roundEnemy.gWeight > 0 ? roundEnemy.gSum / roundEnemy.gWeight : stateEnemy.g;
+    if (extremeG) {
+      stateEnemy.g *= 2.1;
+      stateEnemy.g += 3;
+    }
+    stateEnemy.g = clampNumber(stateEnemy.g, 0.5, gMax);
+    stateEnemy.aoa =
+      roundEnemy.aoaWeight > 0 ? roundEnemy.aoaSum / roundEnemy.aoaWeight : stateEnemy.aoa;
+
+    const record = document.createElement("div");
+    record.className = "record-item";
+    record.innerHTML = `
+      <div class="record-title">第 ${round} 轮</div>
+      <div class="record-row">结果值：己方 ${selfValue} · 敌方 ${enemyValue}</div>
+      <div class="record-sides">
+        <div class="record-side">
+          <div class="record-row">己方动作：${actionNames[selfUse]} / 放弃 ${actionNames[selfDiscard]}</div>
+          <div class="record-row">速度：${stateSelf.speed.toFixed(0)} kt / ${(stateSelf.speed / 661).toFixed(2)} M</div>
+          <div class="record-row">高度：${stateSelf.altitude.toFixed(0)} m</div>
+          <div class="record-row">过载：${stateSelf.g.toFixed(1)} g</div>
+          <div class="record-row">AoA：${stateSelf.aoa.toFixed(0)}° · Ps ${formatPs(stateSelf.ps)}</div>
+        </div>
+        <div class="record-side">
+          <div class="record-row">敌方动作：${actionNames[enemyUse]} / 放弃 ${actionNames[enemyDiscard]}</div>
+          <div class="record-row">速度：${stateEnemy.speed.toFixed(0)} kt / ${(stateEnemy.speed / 661).toFixed(2)} M</div>
+          <div class="record-row">高度：${stateEnemy.altitude.toFixed(0)} m</div>
+          <div class="record-row">过载：${stateEnemy.g.toFixed(1)} g</div>
+          <div class="record-row">AoA：${stateEnemy.aoa.toFixed(0)}° · Ps ${formatPs(stateEnemy.ps)}</div>
+        </div>
+      </div>
+    `;
+    dom.convertRecords.appendChild(record);
+  }
+
+  const totalRecord = document.createElement("div");
+  totalRecord.className = "record-item summary";
+  let statusSelf = totalScoreSelf > 21 ? "失控" : "可控";
+  let statusEnemy = totalScoreEnemy > 21 ? "失控" : "可控";
+  if (totalScoreSelf <= 21 && totalScoreEnemy <= 21 && totalScoreSelf !== totalScoreEnemy) {
+    if (totalScoreSelf < totalScoreEnemy) {
+      statusSelf = "被击落";
+    } else {
+      statusEnemy = "被击落";
+    }
+  }
+  const speedAdjustSelf = (12 - totalScoreSelf) * 6;
+  const speedAdjustEnemy = (12 - totalScoreEnemy) * 6;
+  const finalSpeedSelf = clampNumber(stateSelf.speed + speedAdjustSelf, 120, 1400);
+  const finalSpeedEnemy = clampNumber(stateEnemy.speed + speedAdjustEnemy, 120, 1400);
+  const psAdjustSelf = clampNumber(stateSelf.ps - (totalScoreSelf - 12) * 0.12, -3, 3);
+  const psAdjustEnemy = clampNumber(stateEnemy.ps - (totalScoreEnemy - 12) * 0.12, -3, 3);
+  totalRecord.innerHTML = `
+    <div class="record-title">最终状态</div>
+    <div class="record-sides">
+      <div class="record-side">
+        <div class="record-row">己方总数：${totalScoreSelf} · 状态：${statusSelf}</div>
+        <div class="record-row">速度：${finalSpeedSelf.toFixed(0)} kt / ${(finalSpeedSelf / 661).toFixed(2)} M</div>
+        <div class="record-row">高度：${stateSelf.altitude.toFixed(0)} m</div>
+        <div class="record-row">Ps：${formatPs(psAdjustSelf)}</div>
+      </div>
+      <div class="record-side">
+        <div class="record-row">敌方总数：${totalScoreEnemy} · 状态：${statusEnemy}</div>
+        <div class="record-row">速度：${finalSpeedEnemy.toFixed(0)} kt / ${(finalSpeedEnemy / 661).toFixed(2)} M</div>
+        <div class="record-row">高度：${stateEnemy.altitude.toFixed(0)} m</div>
+        <div class="record-row">Ps：${formatPs(psAdjustEnemy)}</div>
+      </div>
+    </div>
+  `;
+  dom.convertRecords.appendChild(totalRecord);
 };
 
 const syncSettingsUI = () => {
@@ -1506,6 +1881,39 @@ if (dom.loadFileInput) {
     reader.readAsText(file);
   });
 }
+
+if (dom.openConverter) {
+  dom.openConverter.addEventListener("click", () => {
+    if (combat.active) {
+      addLog("任务进行中，无法切换界面。");
+      return;
+    }
+    setActivePage("converter");
+  });
+}
+
+if (dom.backToGame) {
+  dom.backToGame.addEventListener("click", () => {
+    setActivePage("game");
+  });
+}
+
+if (dom.convertCalculate) {
+  dom.convertCalculate.addEventListener("click", updateConverter);
+}
+
+document.querySelectorAll('[data-slot="use"], [data-slot="discard"]').forEach((input) => {
+  input.addEventListener("input", () => {
+    const value = clampNumber(Number(input.value || 1), 1, 12);
+    input.value = `${value}`;
+    const label = input.parentElement?.querySelector("[data-action-name]");
+    if (label) {
+      label.textContent = actionNames[value] || "--";
+    }
+  });
+});
+
+syncActionLabels();
 
 dom.combatCanvas.addEventListener("contextmenu", (event) => {
   event.preventDefault();
