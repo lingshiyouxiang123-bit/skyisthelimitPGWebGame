@@ -1,17 +1,17 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>指挥控制台 - Command Interface</title>
+    <title>航空指挥控制台 - Aerospace Command Interface</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="page">
+    <div id="gamePage" class="page">
       <div id="aircraftSelect" class="modal">
         <div class="modal-card">
           <h2>航空器型号选择</h2>
-          <p class="modal-note">任务池将根据型号加载。现在改成可以在载入后更换类型了。</p>
+          <p class="modal-note">任务池将根据型号加载。</p>
           <div class="modal-options">
             <label>
               <input id="kcOption" type="checkbox" checked />
@@ -123,6 +123,7 @@
             <span>准备点数</span>
             <strong id="prepPoints">0</strong>
           </div>
+          <button id="openConverter" class="btn ghost">自动行动换算</button>
         </div>
       </header>
 
@@ -241,6 +242,199 @@
         <section class="card log">
           <h2>行动记录</h2>
           <div id="logFeed" class="log-feed"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="converterPage" class="page hidden">
+      <header class="hero">
+        <div class="hero-text">
+          <p class="hero-tag">AUTO OPERATION CONVERTER</p>
+          <h1>自动行动换算</h1>
+          <div class="hero-meta">
+            <div>
+              <span>模式</span>
+              <strong>独立工具</strong>
+            </div>
+            <div>
+              <span>状态</span>
+              <strong>离线</strong>
+            </div>
+          </div>
+        </div>
+        <div class="hero-status">
+          <div class="status-line">
+            <span>当前界面</span>
+            <strong>换算器</strong>
+          </div>
+          <button id="backToGame" class="btn ghost">返回指挥台</button>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="card converter">
+          <h2>行动换算</h2>
+          <div class="converter-layout">
+            <div class="converter-inputs">
+              <div class="converter-options">
+                <label>
+                  <input id="gExtremeOption" type="checkbox" />
+                  脑浆摇匀
+                </label>
+              </div>
+              <div class="round-block">
+                <h3>第一轮</h3>
+                <div class="round-rolls">
+                  <label>
+                    <span>己方 d6</span>
+                    <input type="number" min="1" max="6" placeholder="随机" data-round="1" data-side="self" data-slot="roll" />
+                  </label>
+                  <label>
+                    <span>敌方 d6</span>
+                    <input type="number" min="1" max="6" placeholder="随机" data-round="1" data-side="enemy" data-slot="roll" />
+                  </label>
+                </div>
+                <div class="round-grid">
+                  <label>
+                    <span>己方使用</span>
+                    <input type="number" min="1" max="12" value="1" data-round="1" data-side="self" data-slot="use" />
+                    <span class="action-name" data-action-name></span>
+                  </label>
+                  <label>
+                    <span>己方放弃</span>
+                    <input type="number" min="1" max="12" value="1" data-round="1" data-side="self" data-slot="discard" />
+                    <span class="action-name" data-action-name></span>
+                  </label>
+                  <label>
+                    <span>敌方使用</span>
+                    <input type="number" min="1" max="12" value="1" data-round="1" data-side="enemy" data-slot="use" />
+                    <span class="action-name" data-action-name></span>
+                  </label>
+                  <label>
+                    <span>敌方放弃</span>
+                    <input type="number" min="1" max="12" value="1" data-round="1" data-side="enemy" data-slot="discard" />
+                    <span class="action-name" data-action-name></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="round-block">
+                <h3>第二轮</h3>
+                <div class="round-rolls">
+                  <label>
+                    <span>己方 d6</span>
+                    <input type="number" min="1" max="6" placeholder="随机" data-round="2" data-side="self" data-slot="roll" />
+                  </label>
+                  <label>
+                    <span>敌方 d6</span>
+                    <input type="number" min="1" max="6" placeholder="随机" data-round="2" data-side="enemy" data-slot="roll" />
+                  </label>
+                </div>
+                <div class="round-grid">
+                  <label>
+                    <span>己方使用</span>
+                    <input type="number" min="1" max="12" value="1" data-round="2" data-side="self" data-slot="use" />
+                    <span class="action-name" data-action-name></span>
+                  </label>
+                  <label>
+                    <span>己方放弃</span>
+                    <input type="number" min="1" max="12" value="1" data-round="2" data-side="self" data-slot="discard" />
+                    <span class="action-name" data-action-name></span>
+                  </label>
+                  <label>
+                    <span>敌方使用</span>
+                    <input type="number" min="1" max="12" value="1" data-round="2" data-side="enemy" data-slot="use" />
+                    <span class="action-name" data-action-name></span>
+                  </label>
+                  <label>
+                    <span>敌方放弃</span>
+                    <input type="number" min="1" max="12" value="1" data-round="2" data-side="enemy" data-slot="discard" />
+                    <span class="action-name" data-action-name></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="round-block">
+                <h3>第三轮</h3>
+                <div class="round-rolls">
+                  <label>
+                    <span>己方 d6</span>
+                    <input type="number" min="1" max="6" placeholder="随机" data-round="3" data-side="self" data-slot="roll" />
+                  </label>
+                  <label>
+                    <span>敌方 d6</span>
+                    <input type="number" min="1" max="6" placeholder="随机" data-round="3" data-side="enemy" data-slot="roll" />
+                  </label>
+                </div>
+                <div class="round-grid">
+                  <label>
+                    <span>己方使用</span>
+                    <input type="number" min="1" max="12" value="1" data-round="3" data-side="self" data-slot="use" />
+                    <span class="action-name" data-action-name></span>
+                  </label>
+                  <label>
+                    <span>己方放弃</span>
+                    <input type="number" min="1" max="12" value="1" data-round="3" data-side="self" data-slot="discard" />
+                    <span class="action-name" data-action-name></span>
+                  </label>
+                  <label>
+                    <span>敌方使用</span>
+                    <input type="number" min="1" max="12" value="1" data-round="3" data-side="enemy" data-slot="use" />
+                    <span class="action-name" data-action-name></span>
+                  </label>
+                  <label>
+                    <span>敌方放弃</span>
+                    <input type="number" min="1" max="12" value="1" data-round="3" data-side="enemy" data-slot="discard" />
+                    <span class="action-name" data-action-name></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="round-block">
+                <h3>第四轮</h3>
+                <div class="round-rolls">
+                  <label>
+                    <span>己方 d6</span>
+                    <input type="number" min="1" max="6" placeholder="随机" data-round="4" data-side="self" data-slot="roll" />
+                  </label>
+                  <label>
+                    <span>敌方 d6</span>
+                    <input type="number" min="1" max="6" placeholder="随机" data-round="4" data-side="enemy" data-slot="roll" />
+                  </label>
+                </div>
+                <div class="round-grid">
+                  <label>
+                    <span>己方使用</span>
+                    <input type="number" min="1" max="12" value="1" data-round="4" data-side="self" data-slot="use" />
+                    <span class="action-name" data-action-name></span>
+                  </label>
+                  <label>
+                    <span>己方放弃</span>
+                    <input type="number" min="1" max="12" value="1" data-round="4" data-side="self" data-slot="discard" />
+                    <span class="action-name" data-action-name></span>
+                  </label>
+                  <label>
+                    <span>敌方使用</span>
+                    <input type="number" min="1" max="12" value="1" data-round="4" data-side="enemy" data-slot="use" />
+                    <span class="action-name" data-action-name></span>
+                  </label>
+                  <label>
+                    <span>敌方放弃</span>
+                    <input type="number" min="1" max="12" value="1" data-round="4" data-side="enemy" data-slot="discard" />
+                    <span class="action-name" data-action-name></span>
+                  </label>
+                </div>
+              </div>
+
+              <button id="convertCalculate" class="btn primary">计算</button>
+            </div>
+
+            <div class="converter-results">
+              <h3>记录</h3>
+              <div id="convertRecords" class="record-list"></div>
+            </div>
+          </div>
+          <p class="panel-note">该工具是狗斗PVP游戏相关的，与基地系统无直接关联。</p>
         </section>
       </main>
     </div>
